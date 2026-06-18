@@ -541,7 +541,7 @@ function renderTop16(teams) {
     html += `
       <tr>
         <td class="${rankCls}">${i + 1}</td>
-        <td class="team-name">${esc(t.name)}<span class="team-played">${t.played}p</span></td>
+        <td class="team-name">${esc(t.name)}<span class="team-played" aria-label="${t.played} matches played">${t.played}p</span></td>
         <td class="hide-sm"><a class="league-link" href="${esc(t.leagueUrl)}" target="_blank" rel="noopener">${esc(t.leagueName)}</a></td>
         <td class="hide-sm"><span class="${badgeCls}">${qualLabel}</span></td>
         <td class="num"><strong>${t.points}</strong></td>
