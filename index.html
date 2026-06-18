@@ -494,13 +494,12 @@ function selectTop16(leagueResults) {
   // Sort wildcard pool: pts desc, then NRR desc
   wildPool.sort((a, b) => b.points - a.points || b.nrr - a.nrr);
 
-  const needed   = Math.max(0, 16 - winners.length);
+  const needed    = Math.max(0, 16 - winners.length);
   const wildcards = wildPool.slice(0, needed);
 
-  // Combined list ranked by pts desc, NRR desc for display
-  const all = [...winners, ...wildcards];
-  all.sort((a, b) => b.points - a.points || b.nrr - a.nrr);
-  return all;
+  // Winners first (ordered by shield/league name), then wildcards by pts/NRR
+  winners.sort((a, b) => a.leagueName.localeCompare(b.leagueName, undefined, { sensitivity: 'base' }));
+  return [...winners, ...wildcards];
 }
 
 /* ── DOM helpers ─────────────────────────────────────────── */
