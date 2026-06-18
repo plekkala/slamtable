@@ -274,11 +274,11 @@
           <tr>
             <th class="num">#</th>
             <th>Team</th>
-            <th>League</th>
-            <th>Qualification</th>
+            <th class="hide-sm">League</th>
+            <th class="hide-sm">Qualification</th>
             <th class="num">Pts</th>
             <th class="num">NRR</th>
-            <th class="num hide-sm">P</th>
+            <th class="num">P</th>
             <th class="num hide-sm">W</th>
             <th class="num hide-sm">L</th>
           </tr>
@@ -542,11 +542,11 @@ function renderTop16(teams) {
       <tr>
         <td class="${rankCls}">${i + 1}</td>
         <td class="team-name">${esc(t.name)}</td>
-        <td><a class="league-link" href="${esc(t.leagueUrl)}" target="_blank" rel="noopener">${esc(t.leagueName)}</a></td>
-        <td><span class="${badgeCls}">${qualLabel}</span></td>
+        <td class="hide-sm"><a class="league-link" href="${esc(t.leagueUrl)}" target="_blank" rel="noopener">${esc(t.leagueName)}</a></td>
+        <td class="hide-sm"><span class="${badgeCls}">${qualLabel}</span></td>
         <td class="num"><strong>${t.points}</strong></td>
         <td class="num ${nrrCls}">${nrrSign}${t.nrr.toFixed(3)}</td>
-        <td class="num hide-sm">${t.played}</td>
+        <td class="num">${t.played}</td>
         <td class="num hide-sm">${t.won}</td>
         <td class="num hide-sm">${t.lost}</td>
       </tr>`;
