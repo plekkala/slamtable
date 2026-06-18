@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SLAM Cricket – Top 16 Table</title>
+  <style>
+    /* ── reset & tokens ─────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --green-dark:  #1a472a;
+      --green-mid:   #2d6a4f;
+      --green-light: #52b788;
+      --gold:        #ffc107;
+      --winner-bg:   #d1e7dd;
+      --winner-fg:   #0f5132;
+      --wild-bg:     #fff3cd;
+      --wild-fg:     #664d03;
+      --sep-bg:      #f0f4f0;
+      --border:      #dee2e6;
+      --muted:       #6c757d;
+    }
+
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: linear-gradient(160deg, var(--green-dark) 0%, var(--green-mid) 100%);
+      min-height: 100vh;
+      color: #212529;
+    }
+
+    /* ── header ─────────────────────────────────────────────── */
+    header {
+      text-align: center;
+      padding: 2.2rem 1rem 1.8rem;
+      background: rgba(0,0,0,.25);
+      color: #fff;
+    }
+    header h1 { font-size: clamp(1.6rem, 4vw, 2.6rem); color: var(--gold); letter-spacing: .03em; }
+    header p  { margin-top: .4rem; opacity: .85; }
+
+    /* ── layout ─────────────────────────────────────────────── */
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+
+    /* ── card ───────────────────────────────────────────────── */
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 14px rgba(0,0,0,.15);
+      overflow: hidden;
+      margin-bottom: 1.2rem;
+    }
+    .card-head {
+      background: var(--green-dark);
+      color: #fff;
+      padding: .85rem 1.25rem;
+      font-weight: 600;
+      font-size: 1.05rem;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+
+    /* ── controls bar ───────────────────────────────────────── */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: .75rem;
+      padding: .85rem 1.25rem;
+    }
+    .last-updated { color: var(--muted); font-size: .88rem; }
+    .ctrl-right { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+
+    .auto-label { font-size: .88rem; color: #495057; cursor: pointer; display: flex; align-items: center; gap: .35rem; }
+    .auto-label input { accent-color: var(--green-mid); cursor: pointer; }
+
+    .btn {
+      border: none;
+      border-radius: 8px;
+      padding: .52rem 1.3rem;
+      font-size: .95rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: .45rem;
+      transition: background .15s, opacity .15s;
+    }
+    .btn-primary { background: var(--green-dark); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--green-mid); }
+    .btn:disabled { opacity: .55; cursor: not-allowed; }
+
+    /* ── spinner ─────────────────────────────────────────────── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 15px; height: 15px;
+      border: 2px solid rgba(255,255,255,.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: inline-block;
+    }
+
+    /* ── status grid ─────────────────────────────────────────── */
+    #statusPanel { padding: 1rem 1.25rem; }
+    #statusPanel h3 { font-size: .95rem; margin-bottom: .6rem; color: #333; }
+    .progress-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+      gap: .4rem;
+    }
+    .ls {
+      font-size: .8rem;
+      padding: .3rem .55rem;
+      border-radius: 6px;
+      background: #f0f4f0;
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .ls.pending { color: #888; }
+    .ls.ok      { color: var(--winner-fg); background: var(--winner-bg); }
+    .ls.err     { color: #842029; background: #f8d7da; }
+
+    /* ── error alert ─────────────────────────────────────────── */
+    .alert {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1rem;
+      font-size: .88rem;
+    }
+    .alert strong { display: block; margin-bottom: .4rem; }
+    .alert ul { margin-left: 1.25rem; }
+    .alert p  { margin-top: .4rem; color: var(--muted); }
+
+    /* ── main table ──────────────────────────────────────────── */
+    #tableWrapper { display: none; }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    thead th {
+      background: #f8f9fa;
+      padding: .65rem 1rem;
+      text-align: left;
+      font-size: .78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      border-bottom: 2px solid var(--border);
+    }
+    thead th.num { text-align: center; }
+
+    tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #f8f9fa; }
+
+    td { padding: .75rem 1rem; vertical-align: middle; }
+    td.num { text-align: center; }
+
+    .rank      { font-weight: 700; font-size: 1.05rem; width: 46px; text-align: center; color: var(--muted); }
+    .rank.r1   { color: #b8860b; }
+    .rank.r2   { color: #808080; }
+    .rank.r3   { color: #8b4513; }
+
+    .team-name { font-weight: 600; }
+
+    .badge {
+      display: inline-block;
+      padding: .18rem .55rem;
+      border-radius: 20px;
+      font-size: .72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .badge-w { background: var(--winner-bg); color: var(--winner-fg); }
+    .badge-c { background: var(--wild-bg);   color: var(--wild-fg);   }
+
+    .league-link {
+      font-size: .8rem;
+      background: #e9ecef;
+      color: #495057;
+      border-radius: 5px;
+      padding: .18rem .55rem;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .league-link:hover { background: #d0d5da; }
+
+    .nrr-pos { color: #198754; font-weight: 500; }
+    .nrr-neg { color: #dc3545; font-weight: 500; }
+
+    .sep-row td {
+      background: var(--sep-bg);
+      font-size: .78rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      padding: .4rem 1rem;
+    }
+
+    /* ── empty state ─────────────────────────────────────────── */
+    .empty-row td {
+      text-align: center;
+      padding: 2.5rem 1rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* ── footer ──────────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      color: rgba(255,255,255,.65);
+      font-size: .82rem;
+      padding: 1.5rem 1rem 2rem;
+    }
+    footer a { color: rgba(255,255,255,.85); }
+
+    /* ── responsive ──────────────────────────────────────────── */
+    @media (max-width: 650px) {
+      td, th { padding: .55rem .6rem; font-size: .82rem; }
+      .hide-sm { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🏏 SLAM Cricket</h1>
+  <p>Top 16 Qualification Table — all 12 leagues</p>
+</header>
+
+<div class="wrap">
+
+  <!-- Controls -->
+  <div class="card">
+    <div class="controls">
+      <span class="last-updated" id="lastUpdated">Not yet loaded</span>
+      <div class="ctrl-right">
+        <label class="auto-label">
+          <input type="checkbox" id="autoRefresh" checked />
+          Auto-refresh (5 min)
+        </label>
+        <button class="btn btn-primary" id="refreshBtn" onclick="loadAll()">
+          <span id="refreshIcon">🔄</span> Refresh
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading status -->
+  <div class="card" id="statusCard" style="display:none">
+    <div id="statusPanel">
+      <h3 id="statusTitle">Fetching league data…</h3>
+      <div class="progress-grid" id="progressGrid"></div>
+    </div>
+  </div>
+
+  <!-- Error / warning -->
+  <div id="alertBox"></div>
+
+  <!-- Top 16 table -->
+  <div class="card" id="tableWrapper">
+    <div class="card-head">🏆 Top 16 Qualified Teams</div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th class="num">#</th>
+            <th>Team</th>
+            <th>League</th>
+            <th>Qualification</th>
+            <th class="num">Pts</th>
+            <th class="num">NRR</th>
+            <th class="num hide-sm">P</th>
+            <th class="num hide-sm">W</th>
+            <th class="num hide-sm">L</th>
+          </tr>
+        </thead>
+        <tbody id="top16Body">
+          <tr class="empty-row"><td colspan="9">Click Refresh to load data</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /.wrap -->
+
+<footer>
+  <p>Data sourced from
+    <a href="https://theslam.play-cricket.com" target="_blank" rel="noopener">theslam.play-cricket.com</a>
+  </p>
+  <p style="margin-top:.35rem">Last loaded: <span id="footerTime">—</span></p>
+</footer>
+
+<script>
+'use strict';
+
+/* ── League definitions ─────────────────────────────────── */
+const LEAGUE_URLS = [
+  'https://theslam.play-cricket.com/website/division/138912',
+  'https://theslam.play-cricket.com/website/division/138913',
+  'https://theslam.play-cricket.com/website/division/138917',
+  'https://theslam.play-cricket.com/website/division/138918',
+  'https://theslam.play-cricket.com/website/division/138919',
+  'https://theslam.play-cricket.com/website/division/138921',
+  'https://theslam.play-cricket.com/website/division/138922',
+  'https://theslam.play-cricket.com/website/division/138923',
+  'https://theslam.play-cricket.com/website/division/138924',
+  'https://theslam.play-cricket.com/website/division/138925',
+  'https://theslam.play-cricket.com/website/division/138926',
+  'https://theslam.play-cricket.com/website/division/138927',
+];
+
+/* ── CORS proxy helpers ─────────────────────────────────── */
+// Two public proxies tried in order; second returns JSON wrapper
+const PROXIES = [
+  (u) => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
+  (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
+];
+
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout after ' + ms + 'ms')), ms)),
+  ]);
+}
+
+async function fetchHTML(url) {
+  for (const proxyFn of PROXIES) {
+    try {
+      const res = await withTimeout(fetch(proxyFn(url)), 18000);
+      if (!res.ok) continue;
+      const text = await res.text();
+      // allorigins wraps content in {"contents":"..."}
+      if (text.trimStart().startsWith('{')) {
+        try {
+          const json = JSON.parse(text);
+          if (json.contents && json.contents.length > 200) return json.contents;
+        } catch (_) { /* not JSON */ }
+      }
+      if (text.length > 200) return text;
+    } catch (e) {
+      console.warn('[proxy] ' + proxyFn(url).slice(0, 60) + '…', e.message);
+    }
+  }
+  throw new Error('All proxies failed');
+}
+
+/* ── HTML parser ─────────────────────────────────────────── */
+function parseStandings(html, leagueUrl) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+
+  // --- League name -------------------------------------------------
+  // Play-cricket sites typically have the division name in h1/h2 or
+  // the <title> before the first pipe/dash.
+  let leagueName = null;
+  const nameCandidates = [
+    doc.querySelector('.division-name'),
+    doc.querySelector('.league-name'),
+    doc.querySelector('.competition-title'),
+    doc.querySelector('.page-title'),
+    doc.querySelector('h1'),
+    doc.querySelector('h2'),
+    doc.querySelector('title'),
+  ];
+  for (const el of nameCandidates) {
+    if (!el) continue;
+    let txt = el.textContent.trim().replace(/\s+/g, ' ');
+    // Strip trailing site name (e.g. " | The Slam" or " - Play-Cricket")
+    txt = txt.split('|')[0].split(' – ')[0].split(' - ')[0].trim();
+    if (txt.length >= 2 && txt.length <= 80) { leagueName = txt; break; }
+  }
+  const divId = leagueUrl.split('/').pop();
+  leagueName = leagueName || 'Division ' + divId;
+
+  // --- Find standings table ----------------------------------------
+  // Look for any <table> whose header row mentions pts/points AND team/club
+  const tables = Array.from(doc.querySelectorAll('table'));
+  let standingsTable = null;
+
+  for (const t of tables) {
+    const headText = (t.querySelector('thead') || t.querySelector('tr') || t)
+      .textContent.toLowerCase();
+    const hasPts  = /\bpts\b|points/.test(headText);
+    const hasTeam = /\bteam\b|\bclub\b/.test(headText);
+    if (hasPts && hasTeam) { standingsTable = t; break; }
+  }
+
+  // Fallback: table with most data rows
+  if (!standingsTable && tables.length) {
+    standingsTable = tables.reduce((best, t) => {
+      const n = t.querySelectorAll('tbody tr').length;
+      const bN = best ? best.querySelectorAll('tbody tr').length : 0;
+      return n > bN ? t : best;
+    }, null);
+  }
+
+  if (!standingsTable) return { name: leagueName, teams: [] };
+
+  // --- Map header columns ------------------------------------------
+  const headerRow =
+    standingsTable.querySelector('thead tr') ||
+    standingsTable.querySelector('tr');
+  const rawHeaders = Array.from(headerRow?.querySelectorAll('th, td') || [])
+    .map(el => el.textContent.trim().toLowerCase().replace(/[^a-z0-9/]/g, ''));
+
+  const findCol = (...names) => {
+    for (const n of names) {
+      const i = rawHeaders.findIndex(h => h === n || h.startsWith(n));
+      if (i >= 0) return i;
+    }
+    return -1;
+  };
+
+  const C = {
+    pos:    findCol('pos', 'position', '#'),
+    team:   findCol('team', 'club', 'name'),
+    played: findCol('pl', 'p'),
+    won:    findCol('w', 'won'),
+    lost:   findCol('l', 'lost'),
+    pts:    findCol('pts', 'points'),
+    nrr:    findCol('nrr', 'runrate', 'run'),
+  };
+
+  // Sensible fallbacks when columns not identified
+  if (C.team   < 0) C.team   = 1;
+  if (C.pts    < 0) C.pts    = rawHeaders.length > 2 ? rawHeaders.length - 2 : -1;
+  if (C.nrr    < 0) C.nrr    = rawHeaders.length > 1 ? rawHeaders.length - 1 : -1;
+
+  // --- Parse data rows ---------------------------------------------
+  const teams = [];
+  Array.from(standingsTable.querySelectorAll('tbody tr')).forEach((row, idx) => {
+    const cells = Array.from(row.querySelectorAll('td'));
+    if (cells.length < 3) return;                       // skip separators/headers
+    const get = (i) => (i >= 0 && cells[i]) ? cells[i].textContent.trim() : '';
+    const name = get(C.team);
+    if (!name || name.length < 2) return;
+
+    // Strip hyperlink whitespace artefacts
+    const cleanName = name.replace(/\s+/g, ' ').trim();
+
+    teams.push({
+      position: parseInt(get(C.pos))  || (idx + 1),
+      name:     cleanName,
+      played:   parseInt(get(C.played)) || 0,
+      won:      parseInt(get(C.won))    || 0,
+      lost:     parseInt(get(C.lost))   || 0,
+      points:   parseFloat(get(C.pts))  || 0,
+      nrr:      parseFloat(get(C.nrr))  || 0,
+    });
+  });
+
+  // Sort ascending by league position
+  teams.sort((a, b) => a.position - b.position);
+  return { name: leagueName, teams };
+}
+
+/* ── Top-16 selection ────────────────────────────────────── */
+/**
+ * Rules:
+ *  • The team currently ranked 1st in each of the 12 leagues qualifies
+ *    automatically as a "League Winner" (12 spots).
+ *  • The 4 remaining spots go to the best non-qualifying teams across
+ *    all leagues, ranked first by Points (desc) then by NRR (desc).
+ */
+function selectTop16(leagueResults) {
+  const winners  = [];
+  const wildPool = [];
+
+  for (const league of leagueResults) {
+    if (!league.teams || !league.teams.length) continue;
+    const sorted = [...league.teams];          // already sorted by position
+    // Position-1 team → automatic qualifier
+    winners.push({ ...sorted[0], leagueName: league.name, leagueUrl: league.url, qual: 'winner' });
+    // Remaining → wildcard pool
+    sorted.slice(1).forEach(t =>
+      wildPool.push({ ...t, leagueName: league.name, leagueUrl: league.url, qual: 'wildcard' })
+    );
+  }
+
+  // Sort wildcard pool: pts desc, then NRR desc
+  wildPool.sort((a, b) => b.points - a.points || b.nrr - a.nrr);
+
+  const needed   = Math.max(0, 16 - winners.length);
+  const wildcards = wildPool.slice(0, needed);
+
+  // Combined list ranked by pts desc, NRR desc for display
+  const all = [...winners, ...wildcards];
+  all.sort((a, b) => b.points - a.points || b.nrr - a.nrr);
+  return all;
+}
+
+/* ── DOM helpers ─────────────────────────────────────────── */
+function esc(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function setLeagueStatus(index, state, text) {
+  const el = document.getElementById('ls-' + index);
+  if (el) { el.className = 'ls ' + state; el.textContent = text; }
+}
+
+/* ── Render table ────────────────────────────────────────── */
+function renderTop16(teams) {
+  const tbody = document.getElementById('top16Body');
+  if (!teams.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="9">No data loaded — check errors above and try refreshing.</td></tr>';
+    return;
+  }
+
+  let html = '';
+  let seenWild = false;
+
+  teams.forEach((t, i) => {
+    // Separator before first wildcard entry
+    if (!seenWild && t.qual === 'wildcard') {
+      seenWild = true;
+      html += `<tr class="sep-row"><td colspan="9">⚡ Wildcard Qualifiers — Top 4 by Points &amp; NRR</td></tr>`;
+    }
+
+    const rankCls = i === 0 ? 'rank r1' : i === 1 ? 'rank r2' : i === 2 ? 'rank r3' : 'rank';
+    const nrrSign = t.nrr >= 0 ? '+' : '';
+    const nrrCls  = t.nrr >= 0 ? 'nrr-pos' : 'nrr-neg';
+    const badgeCls = t.qual === 'winner' ? 'badge badge-w' : 'badge badge-c';
+    const qualLabel = t.qual === 'winner' ? 'League Winner' : 'Wildcard';
+
+    html += `
+      <tr>
+        <td class="${rankCls}">${i + 1}</td>
+        <td class="team-name">${esc(t.name)}</td>
+        <td><a class="league-link" href="${esc(t.leagueUrl)}" target="_blank" rel="noopener">${esc(t.leagueName)}</a></td>
+        <td><span class="${badgeCls}">${qualLabel}</span></td>
+        <td class="num"><strong>${t.points}</strong></td>
+        <td class="num ${nrrCls}">${nrrSign}${t.nrr.toFixed(3)}</td>
+        <td class="num hide-sm">${t.played}</td>
+        <td class="num hide-sm">${t.won}</td>
+        <td class="num hide-sm">${t.lost}</td>
+      </tr>`;
+  });
+
+  tbody.innerHTML = html;
+}
+
+/* ── Main load function ──────────────────────────────────── */
+let autoTimer   = null;
+let isLoading   = false;
+
+async function loadAll() {
+  if (isLoading) return;
+  isLoading = true;
+
+  const refreshBtn  = document.getElementById('refreshBtn');
+  const statusCard  = document.getElementById('statusCard');
+  const statusTitle = document.getElementById('statusTitle');
+  const alertBox    = document.getElementById('alertBox');
+
+  refreshBtn.disabled = true;
+  refreshBtn.innerHTML = '<span class="spinner"></span> Loading…';
+  alertBox.innerHTML = '';
+  statusCard.style.display = 'block';
+  statusTitle.textContent  = 'Fetching league data…';
+
+  // Build per-league status indicators
+  document.getElementById('progressGrid').innerHTML =
+    LEAGUE_URLS.map((url, i) => {
+      const id = url.split('/').pop();
+      return `<div class="ls pending" id="ls-${i}">⏳ Division ${id}</div>`;
+    }).join('');
+
+  // Show table wrapper early (so spinner is visible)
+  document.getElementById('tableWrapper').style.display = 'block';
+
+  // ── Fetch all 12 leagues in parallel ──
+  const results = await Promise.all(
+    LEAGUE_URLS.map(async (url, i) => {
+      const id = url.split('/').pop();
+      try {
+        const html    = await fetchHTML(url);
+        const parsed  = parseStandings(html, url);
+        setLeagueStatus(i, 'ok', `✓ ${parsed.name} (${parsed.teams.length} teams)`);
+        return { url, ...parsed };
+      } catch (e) {
+        console.error('[load] ' + url, e);
+        setLeagueStatus(i, 'err', `✗ Division ${id}: ${e.message}`);
+        return { url, name: 'Division ' + id, teams: [], error: e.message };
+      }
+    })
+  );
+
+  // ── Select & render top 16 ──
+  const top16 = selectTop16(results);
+  renderTop16(top16);
+
+  // ── Timestamp ──
+  const now     = new Date();
+  const timeStr = now.toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'medium' });
+  document.getElementById('lastUpdated').textContent = 'Last updated: ' + timeStr;
+  document.getElementById('footerTime').textContent  = timeStr;
+
+  // ── Warnings for failed leagues ──
+  const failed = results.filter(r => r.error);
+  if (failed.length) {
+    alertBox.innerHTML = `
+      <div class="alert">
+        <strong>⚠️ ${failed.length} league(s) could not be loaded</strong>
+        <ul>${failed.map(f => `<li><strong>${esc(f.name)}</strong>: ${esc(f.error)}</li>`).join('')}</ul>
+        <p>This is usually caused by CORS restrictions on the CORS proxy.
+           The table above reflects the data that was successfully retrieved.
+           Try refreshing in a moment.</p>
+      </div>`;
+  }
+
+  // ── Collapse status after a short delay ──
+  statusTitle.textContent = `Loaded ${results.length - failed.length} / ${results.length} leagues`;
+  setTimeout(() => { statusCard.style.display = 'none'; }, 5000);
+
+  refreshBtn.disabled = false;
+  refreshBtn.innerHTML = '🔄 Refresh';
+  isLoading = false;
+
+  scheduleAutoRefresh();
+}
+
+/* ── Auto-refresh ────────────────────────────────────────── */
+function scheduleAutoRefresh() {
+  clearTimeout(autoTimer);
+  if (document.getElementById('autoRefresh')?.checked) {
+    autoTimer = setTimeout(loadAll, 5 * 60 * 1000); // 5 minutes
+  }
+}
+
+document.getElementById('autoRefresh').addEventListener('change', scheduleAutoRefresh);
+
+// Initial load on page ready
+document.addEventListener('DOMContentLoaded', loadAll);
+</script>
+</body>
+</html>
