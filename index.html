@@ -318,6 +318,12 @@ const LEAGUE_URLS = [
   'https://theslam.play-cricket.com/website/division/138927',
 ];
 
+/* ── Configuration constants ─────────────────────────────── */
+const FETCH_TIMEOUT_MS        = 18000; // ms to wait for each proxy request
+const MIN_CONTENT_LENGTH      = 200;   // bytes; discard obviously-empty proxy responses
+const AUTO_REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const STATUS_COLLAPSE_DELAY_MS = 5000; // hide status panel after load completes
+
 /* ── CORS proxy helpers ─────────────────────────────────── */
 // Two public proxies tried in order; second returns JSON wrapper
 const PROXIES = [
@@ -335,17 +341,17 @@ function withTimeout(promise, ms) {
 async function fetchHTML(url) {
   for (const proxyFn of PROXIES) {
     try {
-      const res = await withTimeout(fetch(proxyFn(url)), 18000);
+      const res = await withTimeout(fetch(proxyFn(url)), FETCH_TIMEOUT_MS);
       if (!res.ok) continue;
       const text = await res.text();
       // allorigins wraps content in {"contents":"..."}
       if (text.trimStart().startsWith('{')) {
         try {
           const json = JSON.parse(text);
-          if (json.contents && json.contents.length > 200) return json.contents;
+          if (json.contents && json.contents.length > MIN_CONTENT_LENGTH) return json.contents;
         } catch (_) { /* not JSON */ }
       }
-      if (text.length > 200) return text;
+      if (text.length > MIN_CONTENT_LENGTH) return text;
     } catch (e) {
       console.warn('[proxy] ' + proxyFn(url).slice(0, 60) + '…', e.message);
     }
@@ -621,7 +627,7 @@ async function loadAll() {
 
   // ── Collapse status after a short delay ──
   statusTitle.textContent = `Loaded ${results.length - failed.length} / ${results.length} leagues`;
-  setTimeout(() => { statusCard.style.display = 'none'; }, 5000);
+  setTimeout(() => { statusCard.style.display = 'none'; }, STATUS_COLLAPSE_DELAY_MS);
 
   refreshBtn.disabled = false;
   refreshBtn.innerHTML = '🔄 Refresh';
@@ -634,7 +640,7 @@ async function loadAll() {
 function scheduleAutoRefresh() {
   clearTimeout(autoTimer);
   if (document.getElementById('autoRefresh')?.checked) {
-    autoTimer = setTimeout(loadAll, 5 * 60 * 1000); // 5 minutes
+    autoTimer = setTimeout(loadAll, AUTO_REFRESH_INTERVAL_MS);
   }
 }
 
