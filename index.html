@@ -168,6 +168,7 @@
     .rank.r3   { color: #8b4513; }
 
     .team-name { font-weight: 600; }
+    .team-played { font-size: .78rem; font-weight: 400; color: var(--muted); margin-left: .3rem; }
 
     .badge {
       display: inline-block;
@@ -274,17 +275,16 @@
           <tr>
             <th class="num">#</th>
             <th>Team</th>
-            <th>League</th>
-            <th>Qualification</th>
+            <th class="hide-sm">League</th>
+            <th class="hide-sm">Qualification</th>
             <th class="num">Pts</th>
             <th class="num">NRR</th>
-            <th class="num hide-sm">P</th>
             <th class="num hide-sm">W</th>
             <th class="num hide-sm">L</th>
           </tr>
         </thead>
         <tbody id="top16Body">
-          <tr class="empty-row"><td colspan="9">Click Refresh to load data</td></tr>
+          <tr class="empty-row"><td colspan="8">Click Refresh to load data</td></tr>
         </tbody>
       </table>
     </div>
@@ -518,7 +518,7 @@ function setLeagueStatus(index, state, text) {
 function renderTop16(teams) {
   const tbody = document.getElementById('top16Body');
   if (!teams.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="9">No data loaded — check errors above and try refreshing.</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="8">No data loaded — check errors above and try refreshing.</td></tr>';
     return;
   }
 
@@ -529,7 +529,7 @@ function renderTop16(teams) {
     // Separator before first wildcard entry
     if (!seenWild && t.qual === 'wildcard') {
       seenWild = true;
-      html += `<tr class="sep-row"><td colspan="9">⚡ Wildcard Qualifiers — Top 4 by Points &amp; NRR</td></tr>`;
+      html += `<tr class="sep-row"><td colspan="8">⚡ Wildcard Qualifiers — Top 4 by Points &amp; NRR</td></tr>`;
     }
 
     const rankCls = i === 0 ? 'rank r1' : i === 1 ? 'rank r2' : i === 2 ? 'rank r3' : 'rank';
@@ -541,12 +541,11 @@ function renderTop16(teams) {
     html += `
       <tr>
         <td class="${rankCls}">${i + 1}</td>
-        <td class="team-name">${esc(t.name)}</td>
-        <td><a class="league-link" href="${esc(t.leagueUrl)}" target="_blank" rel="noopener">${esc(t.leagueName)}</a></td>
-        <td><span class="${badgeCls}">${qualLabel}</span></td>
+        <td class="team-name">${esc(t.name)}<span class="team-played" aria-label="${t.played} matches played">${t.played}p</span></td>
+        <td class="hide-sm"><a class="league-link" href="${esc(t.leagueUrl)}" target="_blank" rel="noopener">${esc(t.leagueName)}</a></td>
+        <td class="hide-sm"><span class="${badgeCls}">${qualLabel}</span></td>
         <td class="num"><strong>${t.points}</strong></td>
         <td class="num ${nrrCls}">${nrrSign}${t.nrr.toFixed(3)}</td>
-        <td class="num hide-sm">${t.played}</td>
         <td class="num hide-sm">${t.won}</td>
         <td class="num hide-sm">${t.lost}</td>
       </tr>`;
